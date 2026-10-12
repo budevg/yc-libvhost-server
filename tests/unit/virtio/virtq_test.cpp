@@ -866,12 +866,20 @@ static void notify_fd_test(void)
     CU_ASSERT(eventfd_read(fd1, &value) == 0);
     CU_ASSERT(value == 1);
 
+    /* the first replacement after init notifies */
     virtq_set_notify_fd(&vq, fd2);
     CU_ASSERT(vq.notify_fd == fd2);
+    value = 0;
+    CU_ASSERT(eventfd_read(fd2, &value) == 0);
+    CU_ASSERT(value == 1);
+
+    /* re-sync of the same fd doesn't */
+    virtq_set_notify_fd(&vq, fd2);
     errno = 0;
     CU_ASSERT(eventfd_read(fd2, &value) == -1);
     CU_ASSERT(errno == EAGAIN);
 
+    /* further replacements (mask/unmask) don't */
     virtq_set_notify_fd(&vq, fd1);
     CU_ASSERT(vq.notify_fd == fd1);
     errno = 0;
