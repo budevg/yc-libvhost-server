@@ -251,6 +251,8 @@ void virtio_virtq_init(struct virtio_virtq *vq)
 
     /* Make check on the first virtq dequeue. */
     vq->inflight_check = true;
+
+    vq->notify_on_fd_replace = true;
     virtq_inflight_reconnect_update(vq);
 
     virtio_virtq_reset_stat(vq);
@@ -690,6 +692,19 @@ void virtq_set_notify_fd(struct virtio_virtq *vq, int fd)
 {
     int old_fd = vq->notify_fd;
     bool should_notify = old_fd == -1 && fd != -1;
+
+    /*
+     * QEMU installs its masked_notifier as the first callfd on reconnect
+     * and swaps in the guest fd only after the vring is started, without
+     * checking the masked one for pending events. So the first-fd wakeup
+     * and any completions before the swap can be lost; notify on the first
+     * replacement after start as well.
+     */
+    if (vq->notify_on_fd_replace && old_fd != -1 && fd != -1 &&
+        fd != old_fd) {
+        vq->notify_on_fd_replace = false;
+        should_notify = true;
+    }
 
     vq->notify_fd = fd;
 

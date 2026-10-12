@@ -73,6 +73,9 @@ struct virtio_virtq {
      */
     int notify_fd;
 
+    /* Notify on the first notify_fd replacement after virtq init. */
+    bool notify_on_fd_replace;
+
     /*
      * Whether the processing of this virtq is enabled.
      * Can be toggled after virtq is started.
