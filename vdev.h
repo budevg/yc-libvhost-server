@@ -177,6 +177,14 @@ struct vhd_vring {
     int callfd;
     int errfd;
 
+    /*
+     * The frontend doesn't wait for the callfd switch: it didn't request an
+     * ack for the SET_VRING_CALL that installed callfd, so it may check its
+     * old fd before we switch. Written and propagated to vq together with
+     * callfd.
+     */
+    bool callfd_async;
+
     /* started as seen from control plane */
     bool started_in_ctl;
     /* stop requested for this vring; accessed only in the control plane */

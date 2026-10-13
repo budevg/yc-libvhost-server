@@ -122,7 +122,7 @@ int virtq_dequeue_many(struct virtio_virtq *vq,
 
 void virtq_push(struct virtio_virtq *vq, struct virtio_iov *iov, uint32_t len);
 
-void virtq_set_notify_fd(struct virtio_virtq *vq, int fd);
+void virtq_set_notify_fd(struct virtio_virtq *vq, int fd, bool always_notify);
 
 void virtio_free_iov(struct virtio_iov *iov);
 uint16_t virtio_iov_get_head(struct virtio_iov *iov);

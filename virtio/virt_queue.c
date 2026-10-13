@@ -688,10 +688,10 @@ void virtq_push(struct virtio_virtq *vq, struct virtio_iov *iov, uint32_t len)
     vq->stat.metrics.request_completed++;
 }
 
-void virtq_set_notify_fd(struct virtio_virtq *vq, int fd)
+void virtq_set_notify_fd(struct virtio_virtq *vq, int fd, bool always_notify)
 {
     int old_fd = vq->notify_fd;
-    bool should_notify = old_fd == -1 && fd != -1;
+    bool should_notify = always_notify || (old_fd == -1 && fd != -1);
 
     /*
      * QEMU installs its masked_notifier as the first callfd on reconnect

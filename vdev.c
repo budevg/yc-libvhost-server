@@ -196,7 +196,7 @@ static void vring_sync_to_virtq(struct vhd_vring *vring)
     should_kick = !vring->vq.enabled && vring->shadow_vq.enabled;
     vring->vq.enabled = vring->shadow_vq.enabled;
 
-    virtq_set_notify_fd(&vring->vq, vring->callfd);
+    virtq_set_notify_fd(&vring->vq, vring->callfd, vring->callfd_async);
 
     if (should_kick) {
         vhd_set_eventfd(vring->kickfd);
@@ -323,6 +323,7 @@ static void vring_reset(struct vhd_vring *vring)
     replace_fd(&vring->callfd, -1);
     replace_fd(&vring->kickfd, -1);
     replace_fd(&vring->errfd, -1);
+    vring->callfd_async = false;
 
     memset(&vring->shadow_vq, 0, sizeof(vring->shadow_vq));
 
@@ -1411,6 +1412,7 @@ static int vhost_set_vring_call(struct vhd_vdev *vdev, const void *payload,
     VHD_ASSERT(vdev->keep_fd == -1);
     vdev->keep_fd = vring->callfd;
     vring->callfd = callfd;
+    vring->callfd_async = !vdev->ack_pending;
 
     if (!vring->started_in_ctl) {
         int ret = set_vring_call_complete(vdev);
