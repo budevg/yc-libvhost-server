@@ -861,26 +861,26 @@ static void notify_fd_test(void)
 
     CU_ASSERT(vq.notify_fd == -1);
 
-    virtq_set_notify_fd(&vq, fd1);
+    virtq_set_notify_fd(&vq, fd1, false);
     CU_ASSERT(vq.notify_fd == fd1);
     CU_ASSERT(eventfd_read(fd1, &value) == 0);
     CU_ASSERT(value == 1);
 
     /* the first replacement after init notifies */
-    virtq_set_notify_fd(&vq, fd2);
+    virtq_set_notify_fd(&vq, fd2, false);
     CU_ASSERT(vq.notify_fd == fd2);
     value = 0;
     CU_ASSERT(eventfd_read(fd2, &value) == 0);
     CU_ASSERT(value == 1);
 
     /* re-sync of the same fd doesn't */
-    virtq_set_notify_fd(&vq, fd2);
+    virtq_set_notify_fd(&vq, fd2, false);
     errno = 0;
     CU_ASSERT(eventfd_read(fd2, &value) == -1);
     CU_ASSERT(errno == EAGAIN);
 
     /* further replacements (mask/unmask) don't */
-    virtq_set_notify_fd(&vq, fd1);
+    virtq_set_notify_fd(&vq, fd1, false);
     CU_ASSERT(vq.notify_fd == fd1);
     errno = 0;
     CU_ASSERT(eventfd_read(fd1, &value) == -1);
@@ -889,7 +889,7 @@ static void notify_fd_test(void)
     virtio_virtq_release(&vq);
     CU_ASSERT(vq.notify_fd == -1);
 
-    virtq_set_notify_fd(&vq, fd2);
+    virtq_set_notify_fd(&vq, fd2, false);
     CU_ASSERT(vq.notify_fd == fd2);
     value = 0;
     CU_ASSERT(eventfd_read(fd2, &value) == 0);
@@ -897,6 +897,29 @@ static void notify_fd_test(void)
 
     close(fd1);
     close(fd2);
+}
+
+/* Frontend doesn't wait for SET_VRING_CALL ack: every update notifies. */
+static void notify_fd_unacked_test(void)
+{
+    queue_data qdata;
+    virtio_virtq vq;
+    eventfd_t value;
+
+    int fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    CU_ASSERT_FATAL(fd >= 0);
+
+    qdata.attach_virtq(&vq);
+
+    for (int i = 0; i < 3; i++) {
+        virtq_set_notify_fd(&vq, fd, true);
+        value = 0;
+        CU_ASSERT(eventfd_read(fd, &value) == 0);
+        CU_ASSERT(value == 1);
+    }
+
+    virtio_virtq_release(&vq);
+    close(fd);
 }
 
 int main(void)
@@ -930,6 +953,7 @@ int main(void)
     CU_ADD_TEST(suite, inflight_base_test);
     CU_ADD_TEST(suite, inflight_recover_test);
     CU_ADD_TEST(suite, notify_fd_test);
+    CU_ADD_TEST(suite, notify_fd_unacked_test);
 
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();
